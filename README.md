@@ -77,6 +77,7 @@ docker-compose up
 ## Documentation
 
 - [Executive Summary](EXECUTIVE_SUMMARY.md) - Business impact and stakeholder overview
+- [Product Requirements Document](/doc/PRD.md) - GreenLens PRD doc
 
 ## Contact
 
