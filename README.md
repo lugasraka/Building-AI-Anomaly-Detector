@@ -23,6 +23,11 @@ streamlit run app.py
 
 Open `http://localhost:8501` in your browser.
 
+**Or use Docker:**
+```bash
+docker-compose up
+```
+
 ## Key Features
 
 - **COPOD Algorithm**: Fast, accurate anomaly detection optimized for building energy data
@@ -67,6 +72,11 @@ Open `http://localhost:8501` in your browser.
 - Python 3.9+, Streamlit, Plotly
 - PyOD (COPOD), Scikit-learn
 - Pandas, NumPy, Jupyter
+- Docker, Docker Compose
+
+## Documentation
+
+- [Executive Summary](EXECUTIVE_SUMMARY.md) - Business impact and stakeholder overview
 
 ## Contact
 
