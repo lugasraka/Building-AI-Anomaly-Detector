@@ -3,7 +3,11 @@ import pandas as pd
 import plotly.express as px
 from model_logic import AnomalyDetector
 from data_generator import generate_building_data
+from mlops.model_registry import ModelRegistry
+from mlops.monitoring import PerformanceTracker, DriftDetector
 import os
+import time
+from datetime import datetime
 
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="GreenLens AI", layout="wide")
@@ -11,7 +15,7 @@ st.set_page_config(page_title="GreenLens AI", layout="wide")
 # --- HEADER ---
 st.title("🌱 GreenLens: Intelligent Building Anomaly Detection")
 st.markdown("""
-**Program Manager Dashboard** | Aligning Operations with EcoStruxure Strategy
+**Program Manager Dashboard** | Aligning Operations with IntelliCore Strategy
 *This prototype demonstrates how AI correlates energy spikes with financial impact.*
 """)
 st.markdown("---")
@@ -52,6 +56,11 @@ if st.sidebar.button("🔄 Regenerate Simulation Data"):
     generate_building_data()
     st.sidebar.success("New sensor data generated!")
 
+st.sidebar.markdown("---")
+st.sidebar.subheader("🔬 MLOps")
+st.sidebar.info("📊 [View Monitoring Dashboard](/MLOps_Monitoring)")
+st.sidebar.caption("Model health, drift detection, and performance metrics")
+
 # --- LOAD DATA ---
 try:
     df = pd.read_csv('data/building_data.csv')
@@ -62,11 +71,84 @@ except FileNotFoundError:
 
 # --- RUN AI MODEL ---
 detector = AnomalyDetector(contamination=0.05)
-df = detector.train_and_predict(df)
 
-# Filter only anomalies
+# Initialize MLOps components
+registry = ModelRegistry()
+performance_tracker = PerformanceTracker()
+drift_detector = DriftDetector()
+
+# Train model and measure latency
+start_time = time.time()
+df = detector.train_and_predict(df)
+end_time = time.time()
+latency_ms = (end_time - start_time) * 1000
+
+# Calculate model metrics
 anomalies = df[df['is_anomaly']]
 normal = df[~df['is_anomaly']]
+total_data_points = len(df)
+anomaly_count = len(anomalies)
+anomaly_rate = (anomaly_count / total_data_points) * 100
+
+# Calculate model confidence
+avg_anomaly_score = df[df['is_anomaly']]['anomaly_score'].mean() if anomaly_count > 0 else 0
+avg_normal_score = df[~df['is_anomaly']]['anomaly_score'].mean()
+score_std = df['anomaly_score'].std()
+separation_score = (avg_anomaly_score - avg_normal_score) / score_std if score_std > 0 else 0
+model_confidence = min(100, max(0, 70 + (separation_score * 8)))
+
+# Register model with MLOps
+model_id = registry.register_model(
+    model_object=detector,
+    version=f"v1.0.{len(registry.get_model_history()) + 1}",
+    parameters={
+        "contamination": 0.05,
+        "features": ["energy_kwh", "outdoor_temp"],
+        "algorithm": "COPOD"
+    },
+    performance_metrics={
+        "latency_ms": latency_ms,
+        "confidence": model_confidence,
+        "anomaly_rate": anomaly_rate,
+        "detection_count": anomaly_count
+    },
+    training_data_stats={
+        "n_samples": len(df),
+        "feature_stats": {
+            "energy_kwh": {
+                "mean": float(df['energy_kwh'].mean()),
+                "std": float(df['energy_kwh'].std()),
+                "min": float(df['energy_kwh'].min()),
+                "max": float(df['energy_kwh'].max())
+            },
+            "outdoor_temp": {
+                "mean": float(df['outdoor_temp'].mean()),
+                "std": float(df['outdoor_temp'].std()),
+                "min": float(df['outdoor_temp'].min()),
+                "max": float(df['outdoor_temp'].max())
+            }
+        }
+    },
+    description="COPOD anomaly detection model for building energy monitoring",
+    tags=["production", "building-energy", "copod"]
+)
+
+# Calculate reference statistics for drift detection
+drift_detector.calculate_reference_stats(df, features=['energy_kwh', 'outdoor_temp'])
+
+# Log predictions for performance tracking
+for idx, row in df.iterrows():
+    performance_tracker.log_prediction(
+        model_id=model_id,
+        timestamp=datetime.now(),
+        latency_ms=latency_ms / len(df),  # Approximate per-prediction latency
+        anomaly_detected=row['is_anomaly'],
+        anomaly_score=row['anomaly_score'],
+        input_features={
+            'energy_kwh': row['energy_kwh'],
+            'outdoor_temp': row['outdoor_temp']
+        }
+    )
 
 # --- BUSINESS IMPACT METRICS (The "Manager View") ---
 col1, col2, col3 = st.columns(3)
@@ -183,7 +265,7 @@ roadmap_data = {
     "Key Deliverables": [
         "CSV data ingestion, Baseline model, Cost visualization",
         "Live API stream, User feedback loop, Model retraining",
-        "EcoStruxure integration, Automated setpoint control"
+        "IntelliCore integration, Automated setpoint control"
     ],
     "Goal": ["Proof of Value", "Operational Integration", "Autonomous Optimization"]
 }

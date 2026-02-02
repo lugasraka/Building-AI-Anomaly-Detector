@@ -65,7 +65,7 @@ docker-compose up
 |-------|----------|--------------|
 | **Phase 1** | Current | MVP with COPOD model, cost/CO2 tracking |
 | **Phase 2** | Q1 2026 | Live API, feedback loop, retraining |
-| **Phase 3** | Future | EcoStruxure integration, automation |
+| **Phase 3** | Future | IntelliCore integration, automation |
 
 ## Tech Stack
 

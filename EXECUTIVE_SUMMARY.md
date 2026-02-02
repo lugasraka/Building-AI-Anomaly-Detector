@@ -64,7 +64,7 @@ HVAC Status
 | Phase | Timeline | Deliverables | Status |
 |-------|----------|--------------|--------|
 | **Phase 1: MVP** | Complete | COPOD model, cost tracking, CO2 metrics | ✅ Live |
-| **Phase 2: Integration** | Q1 2026 | EcoStruxure API, live data streaming | Planned |
+| **Phase 2: Integration** | Q1 2026 | IntelliCore API, live data streaming | Planned |
 | **Phase 3: Automation** | Future | Auto-setpoint control, predictive maintenance | Future |
 
 ---
@@ -97,7 +97,7 @@ HVAC Status
 ## Next Steps
 
 1. **Pilot Program**: Deploy in 3-5 commercial buildings
-2. **EcoStruxure Integration**: Connect live BMS data streams
+2. **IntelliCore Integration**: Connect live BMS data streams
 3. **Scale**: Rollout to building portfolio with automated reporting
 
 ---

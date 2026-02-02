@@ -11,7 +11,7 @@
 ## 1. Executive Summary
 
 GreenLens is an AI-enabled analytics module designed to identify operational inefficiencies in commercial building HVAC systems. By analyzing historical sensor data and detecting anomalies in real-time, GreenLens translates technical faults into actionable financial and sustainability metrics.
-**Strategic Goal:** To demonstrate how predictive AI can be integrated into the **EcoStruxure** ecosystem to drive the "Energy Efficiency" and "Operational Performance" objectives of Digital Energy.
+**Strategic Goal:** To demonstrate how predictive AI can be integrated into the **IntelliCore** ecosystem to drive the "Energy Efficiency" and "Operational Performance" objectives of Smart Energy Division.
 
 ---
 
@@ -27,11 +27,11 @@ Commercial buildings often suffer from "energy drift"—gradual inefficiencies i
 
 ## 3. Strategic Alignment (The "Why")
 
-This initiative supports the Digital Energy division by:
+This initiative supports the Smart Energy Division by:
 
 1. **Enhancing Operational Efficiency:** Reducing "Time to Detect" (TTD) for equipment faults.
 2. **Sustainability:** Directly correlating energy spikes to CO2 tonnage.
-3. **Foresight Integration:** Designed as a micro-service that could feed into the **EcoStruxure Foresight** platform roadmap.
+3. **Vision Integration:** Designed as a micro-service that could feed into the **IntelliCore Vision** platform roadmap.
 
 ---
 
@@ -99,7 +99,7 @@ This roadmap simulates a Program Manager's view of scaling the solution.
 
 
 * **Phase 3: Automated Control (Future)**
-* Integration with EcoStruxure Building Operation for automated setpoint adjustment based on predictions.
+* Integration with IntelliCore Building Management for automated setpoint adjustment based on predictions.
 * *Goal: Autonomous Energy Optimization.*
 
 
