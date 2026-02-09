@@ -4,7 +4,9 @@ AI-powered dashboard for detecting energy anomalies in commercial building HVAC 
 
 ## Overview
 
-GreenLens uses the **COPOD algorithm** to identify operational inefficiencies by detecting contextual anomalies (e.g., high energy usage during cool weather), indicating equipment faults like stuck dampers or valve leaks.
+GreenLens uses the **COPOD algorithm** (unsupervised anomaly detection methods) to identify operational inefficiencies by detecting contextual anomalies (e.g., high energy usage during cool weather), indicating equipment faults like stuck dampers or valve leaks.
+
+![App Screenshot](/App-screenshot.png)
 
 ## Quick Start
 
