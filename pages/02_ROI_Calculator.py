@@ -8,6 +8,9 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
+from fpdf import FPDF
+import io
+from datetime import datetime
 
 # --- PAGE CONFIG ---
 st.set_page_config(
@@ -28,7 +31,7 @@ st.markdown("---")
 st.sidebar.header("🏢 Building Portfolio")
 
 # Building characteristics
-num_buildings = st.sidebar.number_input("Number of Buildings", min_value=1, max_value=500, value=5)
+num_buildings = st.sidebar.number_input("Number of Buildings", min_value=1, max_value=500, value=10)
 total_sqft = st.sidebar.number_input("Total Square Footage (sq ft)", min_value=1000, max_value=10000000, value=500000)
 avg_energy_cost = st.sidebar.number_input("Average Annual Energy Cost per Building ($)", min_value=10000, max_value=5000000, value=100000)
 
@@ -65,7 +68,7 @@ st.sidebar.header("💵 Investment")
 
 # Pricing inputs
 implementation_cost = st.sidebar.number_input("Implementation Cost ($)", min_value=10000, max_value=500000, value=75000)
-annual_subscription = st.sidebar.number_input("Annual Subscription per Building ($)", min_value=5000, max_value=100000, value=25000)
+annual_subscription = st.sidebar.number_input("Annual Subscription per Building ($)", min_value=5000, max_value=100000, value=12000)
 
 st.sidebar.markdown("---")
 st.sidebar.header("🌍 Sustainability")
@@ -151,10 +154,18 @@ for year in years:
 
 projection_df = pd.DataFrame(projection_data)
 
-# Calculate NPV manually (np.npv removed in NumPy 2.0+)
-cash_flows = [-implementation_cost] + [(annual_savings * ((1 + energy_price_inflation/100) ** (year-1)) - total_annual_cost) for year in range(1, analysis_years)]
+# Calculate NPV over 3 years (consistent with 3-Year ROI display)
+cash_flows_3yr = [-implementation_cost] + [(annual_savings * ((1 + energy_price_inflation/100) ** (year-1)) - total_annual_cost) for year in range(1, 4)]
 r = discount_rate / 100
-npv = sum([cf / ((1 + r) ** i) for i, cf in enumerate(cash_flows)])
+npv_3yr = sum([cf / ((1 + r) ** i) for i, cf in enumerate(cash_flows_3yr)])
+
+# Also calculate 5-year NPV for reference
+cash_flows_5yr = [-implementation_cost] + [(annual_savings * ((1 + energy_price_inflation/100) ** (year-1)) - total_annual_cost) for year in range(1, 6)]
+npv_5yr = sum([cf / ((1 + r) ** i) for i, cf in enumerate(cash_flows_5yr)])
+
+# Use 3-year NPV as the primary metric (consistent with 3-Year ROI)
+npv = npv_3yr
+cash_flows = cash_flows_3yr
 
 # Calculate IRR manually using Newton-Raphson method (np.irr removed in NumPy 2.0+)
 def calculate_irr(cash_flows, guess=0.1):
@@ -194,10 +205,10 @@ for i, row in projection_df.iterrows():
     if cumulative_net >= 0 and payback_year is None:
         payback_year = row["Year"]
 
-# ROI calculation
-total_investment = implementation_cost + (total_annual_cost * analysis_years)
-total_return = projection_df["Annual Savings ($)"].sum()
-roi_percentage = ((total_return - total_investment) / total_investment) * 100
+# ROI calculation (3-year period for consistency with display)
+total_investment_3yr = implementation_cost + (total_annual_cost * 3)
+total_return_3yr = projection_df["Annual Savings ($)"].head(3).sum()
+roi_percentage = ((total_return_3yr - total_investment_3yr) / total_investment_3yr) * 100
 
 # --- MAIN DASHBOARD ---
 
@@ -217,7 +228,7 @@ with col2:
     st.metric(
         "📈 3-Year ROI", 
         f"{roi_percentage:.0f}%",
-        delta=f"NPV: ${npv:,.0f}"
+        delta=f"NPV (3Y): ${npv_3yr:,.0f}"
     )
 
 with col3:
@@ -322,20 +333,22 @@ with col_right:
     
     metrics_data = {
         "Metric": [
-            "Total Investment",
-            "Total Savings ({} years)".format(analysis_years),
-            "Net Benefit",
+            "Total Investment (3-Year)",
+            "Total Savings (3-Year)",
+            "Net Benefit (3-Year)",
+            "NPV 3-Year ({}% discount)".format(discount_rate),
+            "NPV 5-Year ({}% discount)".format(discount_rate),
             "Average Annual Savings",
-            "IRR",
-            "NPV ({}% discount)".format(discount_rate)
+            "IRR"
         ],
         "Value": [
-            f"${total_investment:,.0f}",
-            f"${total_return:,.0f}",
-            f"${total_return - total_investment:,.0f}",
+            f"${total_investment_3yr:,.0f}",
+            f"${total_return_3yr:,.0f}",
+            f"${total_return_3yr - total_investment_3yr:,.0f}",
+            f"${npv_3yr:,.0f}",
+            f"${npv_5yr:,.0f}",
             f"${projection_df['Annual Savings ($)'].mean():,.0f}",
-            f"{irr:.1f}%",
-            f"${npv:,.0f}"
+            f"{irr:.1f}%"
         ]
     }
     
@@ -506,42 +519,324 @@ st.markdown("---")
 # Export options
 st.subheader("📄 Export Results")
 
+
+def generate_pdf_report():
+    """Generate a professional PDF business case report"""
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    
+    # Cover Page
+    pdf.add_page()
+    pdf.set_font('Arial', 'B', 24)
+    pdf.set_text_color(34, 139, 34)  # Green color
+    pdf.cell(0, 20, 'GreenLens AI', ln=True, align='C')
+    pdf.set_font('Arial', 'B', 18)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(0, 10, 'Business Case Analysis', ln=True, align='C')
+    pdf.set_font('Arial', '', 12)
+    pdf.cell(0, 10, f'Generated: {datetime.now().strftime("%B %d, %Y")}', ln=True, align='C')
+    pdf.ln(20)
+    
+    # Executive Summary
+    pdf.set_font('Arial', 'B', 16)
+    pdf.set_fill_color(240, 240, 240)
+    pdf.cell(0, 10, 'Executive Summary', ln=True, fill=True)
+    pdf.ln(5)
+    
+    pdf.set_font('Arial', '', 11)
+    summary_items = [
+        ("Portfolio Size", f"{num_buildings} buildings"),
+        ("Total Square Footage", f"{total_sqft:,} sq ft"),
+        ("Annual Energy Cost", f"${total_annual_energy:,.0f}"),
+        ("Energy Waste", f"{waste_percentage}%"),
+        ("Savings Capture", f"{capture_rate}%"),
+        ("Year 1 Savings", f"${annual_savings:,.0f}"),
+        ("3-Year ROI", f"{roi_percentage:.1f}%"),
+        ("Payback Period", f"{payback_year:.1f} years" if payback_year else "N/A"),
+        ("Total CO2 Reduction", f"{total_co2:,.0f} tons"),
+    ]
+    
+    for label, value in summary_items:
+        pdf.set_font('Arial', 'B', 11)
+        pdf.cell(80, 8, label + ':', ln=False)
+        pdf.set_font('Arial', '', 11)
+        pdf.cell(0, 8, value, ln=True)
+    pdf.ln(10)
+    
+    # Financial Projections - 3 Year (Primary Analysis)
+    pdf.set_font('Arial', 'B', 16)
+    pdf.set_fill_color(240, 240, 240)
+    pdf.cell(0, 10, 'Financial Projections (3-Year Analysis)', ln=True, fill=True)
+    pdf.ln(5)
+    
+    # Table header - 3 Year
+    pdf.set_fill_color(220, 220, 220)
+    pdf.set_font('Arial', 'B', 10)
+    pdf.cell(20, 8, 'Year', 1, 0, 'C', True)
+    pdf.cell(35, 8, 'Savings', 1, 0, 'C', True)
+    pdf.cell(35, 8, 'Cost', 1, 0, 'C', True)
+    pdf.cell(35, 8, 'Net Benefit', 1, 0, 'C', True)
+    pdf.cell(35, 8, 'Cumulative', 1, 0, 'C', True)
+    pdf.cell(40, 8, 'CO2 (tons)', 1, 1, 'C', True)
+    
+    # Table data - First 3 years
+    pdf.set_font('Arial', '', 10)
+    for _, row in projection_df.head(3).iterrows():
+        pdf.cell(20, 7, str(int(row['Year'])), 1, 0, 'C')
+        pdf.cell(35, 7, f"${row['Annual Savings ($)']:,.0f}", 1, 0, 'R')
+        pdf.cell(35, 7, f"${row['Annual Cost ($)']:,.0f}", 1, 0, 'R')
+        pdf.cell(35, 7, f"${row['Net Benefit ($)']:,.0f}", 1, 0, 'R')
+        pdf.cell(35, 7, f"${row['Cumulative Net ($)']:,.0f}", 1, 0, 'R')
+        pdf.cell(40, 7, f"{row['CO2 Saved (tons)']:,.1f}", 1, 1, 'R')
+    pdf.ln(10)
+    
+    # Extended 5-Year Projection
+    pdf.add_page()
+    pdf.set_font('Arial', 'B', 16)
+    pdf.set_fill_color(240, 240, 240)
+    pdf.cell(0, 10, 'Extended Financial Projections (5-Year)', ln=True, fill=True)
+    pdf.ln(5)
+    
+    pdf.set_font('Arial', '', 10)
+    pdf.cell(0, 6, 'Complete 5-year projection showing long-term value accumulation:', ln=True)
+    pdf.ln(3)
+    
+    # Table header - 5 Year
+    pdf.set_fill_color(220, 220, 220)
+    pdf.set_font('Arial', 'B', 10)
+    pdf.cell(20, 8, 'Year', 1, 0, 'C', True)
+    pdf.cell(35, 8, 'Savings', 1, 0, 'C', True)
+    pdf.cell(35, 8, 'Cost', 1, 0, 'C', True)
+    pdf.cell(35, 8, 'Net Benefit', 1, 0, 'C', True)
+    pdf.cell(35, 8, 'Cumulative', 1, 0, 'C', True)
+    pdf.cell(40, 8, 'CO2 (tons)', 1, 1, 'C', True)
+    
+    # Table data - All 5 years
+    pdf.set_font('Arial', '', 10)
+    for _, row in projection_df.iterrows():
+        pdf.cell(20, 7, str(int(row['Year'])), 1, 0, 'C')
+        pdf.cell(35, 7, f"${row['Annual Savings ($)']:,.0f}", 1, 0, 'R')
+        pdf.cell(35, 7, f"${row['Annual Cost ($)']:,.0f}", 1, 0, 'R')
+        pdf.cell(35, 7, f"${row['Net Benefit ($)']:,.0f}", 1, 0, 'R')
+        pdf.cell(35, 7, f"${row['Cumulative Net ($)']:,.0f}", 1, 0, 'R')
+        pdf.cell(40, 7, f"{row['CO2 Saved (tons)']:,.1f}", 1, 1, 'R')
+    pdf.ln(5)
+    
+    # 5-Year Summary Box
+    total_5yr_investment = implementation_cost + (total_annual_cost * 5)
+    total_5yr_savings = projection_df["Annual Savings ($)"].sum()
+    total_5yr_co2 = projection_df["CO2 Saved (tons)"].sum()
+    
+    pdf.set_fill_color(240, 248, 255)  # Light blue background
+    pdf.set_font('Arial', 'B', 11)
+    pdf.cell(0, 8, '5-Year Summary:', ln=True, fill=True)
+    pdf.set_font('Arial', '', 10)
+    pdf.cell(0, 6, f"Total Investment: ${total_5yr_investment:,.0f}", ln=True)
+    pdf.cell(0, 6, f"Total Savings: ${total_5yr_savings:,.0f}", ln=True)
+    pdf.cell(0, 6, f"Net Benefit: ${total_5yr_savings - total_5yr_investment:,.0f}", ln=True)
+    pdf.cell(0, 6, f"Total CO2 Reduction: {total_5yr_co2:,.0f} tons", ln=True)
+    pdf.cell(0, 6, f"5-Year NPV: ${npv_5yr:,.0f}", ln=True)
+    pdf.ln(10)
+    
+    # Scenario Analysis
+    pdf.add_page()
+    pdf.set_font('Arial', 'B', 16)
+    pdf.set_fill_color(240, 240, 240)
+    pdf.cell(0, 10, 'Scenario Analysis', ln=True, fill=True)
+    pdf.ln(5)
+    
+    # Scenario table header
+    pdf.set_fill_color(220, 220, 220)
+    pdf.set_font('Arial', 'B', 10)
+    pdf.cell(35, 8, 'Scenario', 1, 0, 'C', True)
+    pdf.cell(25, 8, 'Waste %', 1, 0, 'C', True)
+    pdf.cell(30, 8, 'Capture %', 1, 0, 'C', True)
+    pdf.cell(40, 8, 'Year 1 Savings', 1, 0, 'C', True)
+    pdf.cell(30, 8, '3-Yr ROI', 1, 0, 'C', True)
+    pdf.cell(30, 8, 'Payback', 1, 1, 'C', True)
+    
+    # Scenario data
+    pdf.set_font('Arial', '', 10)
+    for _, row in scenario_df.iterrows():
+        pdf.cell(35, 7, row['Scenario'], 1, 0, 'L')
+        pdf.cell(25, 7, f"{row['Waste %']}%", 1, 0, 'C')
+        pdf.cell(30, 7, f"{row['Capture %']}%", 1, 0, 'C')
+        pdf.cell(40, 7, f"${row['Year 1 Savings']:,.0f}", 1, 0, 'R')
+        pdf.cell(30, 7, f"{row['3-Year ROI']:.1f}%", 1, 0, 'R')
+        pdf.cell(30, 7, f"{row['Payback (years)']:.1f} yrs", 1, 1, 'R')
+    pdf.ln(10)
+    
+    # Investment Summary
+    pdf.set_font('Arial', 'B', 16)
+    pdf.set_fill_color(240, 240, 240)
+    pdf.cell(0, 10, 'Investment Summary', ln=True, fill=True)
+    pdf.ln(5)
+    
+    pdf.set_font('Arial', '', 11)
+    investment_items = [
+        ("Implementation Cost", f"${implementation_cost:,.0f}"),
+        ("Annual Subscription", f"${annual_subscription:,.0f} per building"),
+        ("Total Annual Cost", f"${total_annual_cost:,.0f}"),
+        ("", ""),
+        ("3-Year Analysis:", ""),
+        ("  Total Investment", f"${total_investment_3yr:,.0f}"),
+        ("  Total Savings", f"${total_return_3yr:,.0f}"),
+        ("  Net Benefit", f"${total_return_3yr - total_investment_3yr:,.0f}"),
+        ("  NPV (3-Year)", f"${npv_3yr:,.0f}"),
+        ("", ""),
+        ("5-Year Analysis:", ""),
+        ("  Total Investment", f"${implementation_cost + (total_annual_cost * 5):,.0f}"),
+        ("  Total Savings", f"${projection_df['Annual Savings ($)'].sum():,.0f}"),
+        ("  Net Benefit", f"${projection_df['Annual Savings ($)'].sum() - (implementation_cost + (total_annual_cost * 5)):,.0f}"),
+        ("  NPV (5-Year)", f"${npv_5yr:,.0f}"),
+        ("", ""),
+        ("Internal Rate of Return (IRR)", f"{irr:.1f}%"),
+    ]
+    
+    for label, value in investment_items:
+        pdf.set_font('Arial', 'B', 11)
+        pdf.cell(80, 8, label + ':', ln=False)
+        pdf.set_font('Arial', '', 11)
+        pdf.cell(0, 8, value, ln=True)
+    pdf.ln(10)
+    
+    # Assumptions
+    pdf.set_font('Arial', 'B', 14)
+    pdf.cell(0, 10, 'Key Assumptions', ln=True)
+    pdf.set_font('Arial', '', 10)
+    assumptions = [
+        f"- Analysis Period: {analysis_years} years",
+        f"- Discount Rate: {discount_rate}%",
+        f"- Energy Price Inflation: {energy_price_inflation}% annually",
+        f"- CO2 Emission Factor: {co2_per_kwh} kg/kWh",
+        f"- Industry average energy waste: 15-30%",
+        f"- Typical savings capture rate: 60-80%",
+    ]
+    for assumption in assumptions:
+        pdf.cell(0, 6, assumption, ln=True)
+    
+    # Footer
+    pdf.ln(20)
+    pdf.set_font('Arial', 'I', 9)
+    pdf.set_text_color(100, 100, 100)
+    pdf.cell(0, 10, 'GreenLens AI Business Case Analysis | Generated by ROI Calculator', ln=True, align='C')
+    pdf.cell(0, 5, 'For internal use only. Projections based on user inputs and industry averages.', ln=True, align='C')
+    
+    return bytes(pdf.output(dest='S'))
+
+
 col1, col2 = st.columns(2)
 
 with col1:
     if st.button("📊 Generate Business Case PDF"):
-        st.info("PDF generation would be implemented here. This would create a formatted business case document with all charts and projections.")
+        try:
+            pdf_bytes = generate_pdf_report()
+            st.download_button(
+                label="📥 Download PDF Report",
+                data=pdf_bytes,
+                file_name=f"GreenLens_AI_Business_Case_{datetime.now().strftime('%Y%m%d')}.pdf",
+                mime="application/pdf"
+            )
+            st.success("✅ PDF report generated successfully!")
+        except Exception as e:
+            st.error(f"❌ Error generating PDF: {str(e)}")
 
 with col2:
     if st.button("📈 Export to Excel"):
-        # Create Excel export
-        import io
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            projection_df.to_excel(writer, sheet_name='Financial Projection', index=False)
-            scenario_df.to_excel(writer, sheet_name='Scenario Analysis', index=False)
-            sensitivity_df.to_excel(writer, sheet_name='Sensitivity Analysis', index=False)
+        try:
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                # Financial Projection sheet
+                projection_df.to_excel(writer, sheet_name='Financial Projection', index=False)
+                
+                # Scenario Analysis sheet
+                scenario_df.to_excel(writer, sheet_name='Scenario Analysis', index=False)
+                
+                # Sensitivity Analysis sheet
+                sensitivity_df.to_excel(writer, sheet_name='Sensitivity Analysis', index=False)
+                
+                # Summary sheet with formatting
+                summary_data = {
+                    'Metric': [
+                        'Report Generated',
+                        'Number of Buildings',
+                        'Total Square Footage (sq ft)',
+                        'Average Annual Energy Cost per Building ($)',
+                        'Total Annual Energy Cost ($)',
+                        'Waste Percentage (%)',
+                        'Capture Rate (%)',
+                        'Implementation Cost ($)',
+                        'Annual Subscription per Building ($)',
+                        'Total Annual Subscription ($)',
+                        'Year 1 Savings ($)',
+                        '3-Year ROI (%)',
+                        'Payback Period (years)',
+                        'Total CO2 Reduction (tons)',
+                        'Total 3-Year Investment ($)',
+                        'Total 3-Year Savings ($)',
+                        'Net Benefit 3-Year ($)',
+                        'Internal Rate of Return - IRR (%)',
+                        'Net Present Value - NPV ($)',
+                        'Analysis Period (years)',
+                        'Discount Rate (%)',
+                        'Energy Price Inflation (%)',
+                        'CO2 Emission Factor (kg/kWh)',
+                    ],
+                    'Value': [
+                        datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        num_buildings,
+                        total_sqft,
+                        f"${avg_energy_cost:,.0f}",
+                        f"${total_annual_energy:,.0f}",
+                        f"{waste_percentage}%",
+                        f"{capture_rate}%",
+                        f"${implementation_cost:,.0f}",
+                        f"${annual_subscription:,.0f}",
+                        f"${total_annual_cost:,.0f}",
+                        f"${annual_savings:,.0f}",
+                        f"{roi_percentage:.1f}%",
+                        f"{payback_year:.1f}" if payback_year else "N/A",
+                        f"{total_co2:,.1f}",
+                        f"${total_investment_3yr:,.0f}",
+                        f"${total_return_3yr:,.0f}",
+                        f"${total_return_3yr - total_investment_3yr:,.0f}",
+                        f"{irr:.1f}%",
+                        f"${npv:,.0f}",
+                        analysis_years,
+                        f"{discount_rate}%",
+                        f"{energy_price_inflation}%",
+                        co2_per_kwh,
+                    ]
+                }
+                pd.DataFrame(summary_data).to_excel(writer, sheet_name='Executive Summary', index=False)
+                
+                # Get workbook and apply formatting
+                workbook = writer.book
+                for sheet_name in writer.sheets:
+                    worksheet = writer.sheets[sheet_name]
+                    # Auto-adjust column widths
+                    for column in worksheet.columns:
+                        max_length = 0
+                        column_letter = column[0].column_letter
+                        for cell in column:
+                            try:
+                                if len(str(cell.value)) > max_length:
+                                    max_length = len(str(cell.value))
+                            except:
+                                pass
+                        adjusted_width = min(max_length + 2, 50)
+                        worksheet.column_dimensions[column_letter].width = adjusted_width
             
-            # Summary sheet
-            summary_data = {
-                'Metric': ['Number of Buildings', 'Total Square Footage', 'Annual Energy Cost', 
-                          'Waste Percentage', 'Capture Rate', 'Implementation Cost', 'Annual Subscription',
-                          'Year 1 Savings', '3-Year ROI', 'Payback Period', 'Total CO2 Reduction'],
-                'Value': [num_buildings, total_sqft, f"${total_annual_energy:,.0f}",
-                         f"{waste_percentage}%", f"{capture_rate}%", f"${implementation_cost:,.0f}",
-                         f"${total_annual_cost:,.0f}", f"${annual_savings:,.0f}",
-                         f"{roi_percentage:.1f}%", f"{payback_year} years" if payback_year else "N/A",
-                         f"{total_co2:,.1f} tons"]
-            }
-            pd.DataFrame(summary_data).to_excel(writer, sheet_name='Summary', index=False)
-        
-        output.seek(0)
-        st.download_button(
-            label="Download Excel Report",
-            data=output,
-            file_name="GreenLens_AI_ROI_Analysis.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+            output.seek(0)
+            st.download_button(
+                label="📥 Download Excel Report",
+                data=output,
+                file_name=f"GreenLens_AI_ROI_Analysis_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+            st.success("✅ Excel report generated successfully!")
+        except Exception as e:
+            st.error(f"❌ Error generating Excel: {str(e)}")
 
 st.markdown("---")
 

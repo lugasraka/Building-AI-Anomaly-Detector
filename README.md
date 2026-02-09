@@ -33,19 +33,27 @@ docker-compose up
 - **COPOD Algorithm**: Fast, accurate anomaly detection optimized for building energy data
 - **Financial Analysis**: Calculates wasted energy costs with configurable rates ($/kWh)
 - **CO2 Tracking**: Configurable emission factors (Grid/Renewable/Coal/Custom)
+- **ROI Calculator**: Interactive business case analysis with PDF and Excel export
 - **13 Data Variables**: Energy, temperature, occupancy, HVAC status, humidity, solar, wind, etc.
 - **Interactive Dashboard**: Real-time visualization with explainable AI
+- **MLOps Monitoring**: Model registry, drift detection, and performance tracking
 - **Model Comparison**: Jupyter notebook comparing Isolation Forest, HBOS, and COPOD
 
 ## Project Structure
 
 ```
-├── app.py                    # Streamlit dashboard
-├── model_logic.py            # COPOD anomaly detection
-├── data_generator.py         # Synthetic data (13 variables)
-├── requirements.txt          # Dependencies
-├── data/building_data.csv    # Generated dataset
-└── experiments/              # Model comparison notebook
+├── app.py                      # Main Streamlit dashboard
+├── pages/
+│   ├── 01_MLOps_Monitoring.py  # Model performance dashboard
+│   └── 02_ROI_Calculator.py    # Business case calculator
+├── mlops/
+│   ├── monitoring.py           # Drift detection & performance tracking
+│   └── model_registry.py       # Model versioning
+├── model_logic.py              # COPOD anomaly detection
+├── data_generator.py           # Synthetic data (13 variables)
+├── requirements.txt            # Dependencies
+├── data/building_data.csv      # Generated dataset
+└── experiments/                # Model comparison notebook
 ```
 
 ## CO2 Emission Factors
@@ -58,6 +66,15 @@ docker-compose up
 | Custom | User-defined |
 
 *Configurable via sidebar in the app*
+
+## ROI Calculator
+
+Interactive business case tool with:
+- 3-Year and 5-Year financial projections
+- Scenario analysis (Conservative/Expected/Optimistic)
+- Sensitivity analysis
+- **PDF export**: Professional business case report
+- **Excel export**: Multi-sheet analysis workbook
 
 ## Roadmap
 
@@ -72,6 +89,7 @@ docker-compose up
 - Python 3.9+, Streamlit, Plotly
 - PyOD (COPOD), Scikit-learn
 - Pandas, NumPy, Jupyter
+- fpdf2 (PDF export), openpyxl (Excel export)
 - Docker, Docker Compose
 
 ## Documentation

@@ -5,3 +5,5 @@ scikit-learn
 plotly
 matplotlib
 pyod
+openpyxl
+fpdf2

@@ -217,8 +217,12 @@ class PerformanceTracker:
         # Append to log file
         logs = []
         if os.path.exists(self.log_path):
-            with open(self.log_path, 'r') as f:
-                logs = json.load(f)
+            try:
+                with open(self.log_path, 'r') as f:
+                    logs = json.load(f)
+            except json.JSONDecodeError:
+                # File is corrupted, start fresh
+                logs = []
         
         logs.append(log_entry)
         
@@ -234,8 +238,11 @@ class PerformanceTracker:
         if not os.path.exists(self.log_path):
             return {"error": "No performance logs available"}
         
-        with open(self.log_path, 'r') as f:
-            logs = json.load(f)
+        try:
+            with open(self.log_path, 'r') as f:
+                logs = json.load(f)
+        except json.JSONDecodeError:
+            return {"error": "Performance log file is corrupted"}
         
         cutoff_time = datetime.now() - timedelta(hours=hours)
         recent_logs = [
@@ -278,8 +285,11 @@ class PerformanceTracker:
         if not os.path.exists(self.log_path):
             return []
         
-        with open(self.log_path, 'r') as f:
-            logs = json.load(f)
+        try:
+            with open(self.log_path, 'r') as f:
+                logs = json.load(f)
+        except json.JSONDecodeError:
+            return []
         
         cutoff_time = datetime.now() - timedelta(hours=hours)
         recent_logs = [
